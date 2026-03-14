@@ -1,0 +1,132 @@
+
+<div style="display:flex; justify-content:center; align-items:center; height:500px;">
+  <canvas id="c" style="display:block;"></canvas>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('c');
+  const W = 500, H = 500;
+  canvas.width = W; canvas.height = H;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(0, 0, 5);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(3, 3, 5);
+  scene.add(dirLight);
+  const rimLight = new THREE.DirectionalLight(0xc8d8ff, 0.3);
+  rimLight.position.set(-3, -2, 2);
+  scene.add(rimLight);
+
+  const eyeGroup = new THREE.Group();
+  scene.add(eyeGroup);
+
+  // Sclera
+  const sclera = new THREE.Mesh(
+    new THREE.SphereGeometry(1.0, 64, 64),
+    new THREE.MeshPhongMaterial({ color: 0xf5f0e8, specular: 0x888888, shininess: 60 })
+  );
+  eyeGroup.add(sclera);
+
+  const irisGroup = new THREE.Group();
+  eyeGroup.add(irisGroup);
+
+  // Iris base — dark
+  const iris = new THREE.Mesh(
+    new THREE.CircleGeometry(0.42, 64),
+    new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 30 })
+  );
+  iris.position.z = 0.97;
+  irisGroup.add(iris);
+
+  // Iris texture rings — very dark grays
+  for(let i = 0; i < 6; i++){
+    const r = 0.08 + i * 0.055;
+    const geo = new THREE.RingGeometry(r, r + 0.012, 64);
+    const mat = new THREE.MeshBasicMaterial({
+      color: i%2===0 ? 0x1a1a1a : 0x2a2a2a,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.6
+    });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.position.z = 0.971;
+    irisGroup.add(ring);
+  }
+
+  // Radial lines
+  for(let i = 0; i < 20; i++){
+    const angle = (i / 20) * Math.PI * 2;
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0.08 * Math.cos(angle), 0.08 * Math.sin(angle), 0.972),
+      new THREE.Vector3(0.40 * Math.cos(angle), 0.40 * Math.sin(angle), 0.972),
+    ]);
+    irisGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 })));
+  }
+
+  // Pupil
+  const pupil = new THREE.Mesh(
+    new THREE.CircleGeometry(0.26, 64),
+    new THREE.MeshBasicMaterial({ color: 0x000000 })
+  );
+  pupil.position.z = 0.975;
+  irisGroup.add(pupil);
+
+  // Pupil depth ring
+  const pupilRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.22, 0.28, 64),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 })
+  );
+  pupilRing.position.z = 0.974;
+  irisGroup.add(pupilRing);
+
+  // Cornea gloss
+  const cornea = new THREE.Mesh(
+    new THREE.SphereGeometry(1.01, 64, 64),
+    new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, specular: 0xffffff, shininess: 200 })
+  );
+  eyeGroup.add(cornea);
+
+  // Main highlight
+  const highlight = new THREE.Mesh(
+    new THREE.CircleGeometry(0.055, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+  );
+  highlight.position.set(0.18, 0.22, 1.012);
+  irisGroup.add(highlight);
+
+  // Secondary highlight
+  const hl2 = new THREE.Mesh(
+    new THREE.CircleGeometry(0.022, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })
+  );
+  hl2.position.set(-0.1, -0.18, 1.012);
+  irisGroup.add(hl2);
+
+  let mouseX = 0, mouseY = 0;
+  window.addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    mouseX = ((e.clientX - r.left) / W) * 2 - 1;
+    mouseY = -((e.clientY - r.top) / H) * 2 + 1;
+  });
+
+  const maxRot = 0.28;
+  let rotX = 0, rotY = 0;
+
+  function animate(){
+    requestAnimationFrame(animate);
+    rotX += (-mouseY * maxRot - rotX) * 0.08;
+    rotY += ( mouseX * maxRot - rotY) * 0.08;
+    irisGroup.rotation.x = rotX;
+    irisGroup.rotation.y = rotY;
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
